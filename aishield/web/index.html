@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Shield: Intelligent Data Privacy &amp; Leak Prevention System</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🛡️</div>
+        <div>
+          <h2>AI SHIELD</h2>
+          <span class="badge-ver">v1.0.0 Cloud Privacy Gateway</span>
+        </div>
+      </div>
+      
+      <div class="student-meta">
+        <p><strong>Student:</strong> Rindhiya A (23UAI091)</p>
+        <p><strong>Guide:</strong> Ms. M. Subashini</p>
+        <p><strong>Dept:</strong> AI &amp; Data Science</p>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-scan" id="nav-scan">
+          <span class="icon">🔍</span> Document Scanner
+        </button>
+        <button class="nav-item" data-tab="tab-report" id="nav-report">
+          <span class="icon">📊</span> Privacy Report
+        </button>
+        <button class="nav-item" data-tab="tab-ledger" id="nav-ledger">
+          <span class="icon">⛓️</span> Audit Ledger &amp; Integrity
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="ledger-quick-status" id="quick-ledger-status">
+          <span class="status-dot valid"></span>
+          <span>Ledger Integrity: VALID</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- HEADER -->
+      <header class="topbar">
+        <div>
+          <h1 id="view-title">Privacy Checkpoint &amp; Redaction Console</h1>
+          <p class="subtitle">Sit safely between users and external AI endpoints — Zero sensitive data leakage</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-outline" id="btn-load-sample">Load Synthetic Sample</button>
+        </div>
+      </header>
+
+      <!-- TAB 1: SCAN & REDACT -->
+      <section id="tab-scan" class="tab-pane active">
+        <!-- Input Panel -->
+        <div class="card card-input">
+          <div class="card-header">
+            <h3>1. Upload or Paste Document</h3>
+            <span class="helper">Supports TXT, PDF, DOCX (Max 5MB / 200,000 chars)</span>
+          </div>
+          <div class="card-body">
+            <div class="file-drop-area" id="drop-area">
+              <span class="drop-icon">📄</span>
+              <p>Drag &amp; drop your document here, or <span class="file-browse-link">browse</span></p>
+              <input type="file" id="file-upload" accept=".txt,.pdf,.docx" style="display:none;">
+              <div id="file-name-display" class="file-name-tag hidden"></div>
+            </div>
+
+            <div class="textarea-wrapper">
+              <textarea id="raw-text" placeholder="Or paste sensitive document text here..."></textarea>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn btn-primary" id="btn-scan">
+                <span class="btn-spinner hidden" id="scan-spinner"></span>
+                <span>Scan Document for Sensitive Data</span>
+              </button>
+              <button class="btn btn-ghost" id="btn-clear">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Findings & Governor Review Panel (hidden until scan) -->
+        <div class="card card-findings hidden" id="findings-panel">
+          <div class="card-header">
+            <div>
+              <h3>2. Detected Findings &amp; Risk Classification</h3>
+              <span class="helper">Select entity categories to approve for automated redaction</span>
+            </div>
+            <div class="risk-badge-box">
+              <span>Document Risk:</span>
+              <span class="risk-pill" id="risk-pill">UNKNOWN</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="approval-controls">
+              <div class="controls-header">
+                <strong>Approve Redaction by Entity Category:</strong>
+                <div class="select-all-buttons">
+                  <button class="btn btn-sm" id="btn-select-all">Select All</button>
+                  <button class="btn btn-sm" id="btn-select-none">Deselect All</button>
+                </div>
+              </div>
+              <div class="category-checkboxes" id="category-checkboxes">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- Entities table -->
+            <div class="table-container">
+              <table class="findings-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Entity Type</th>
+                    <th>Span [Start, End)</th>
+                    <th>Confidence</th>
+                    <th>Detector</th>
+                    <th>SHA-256 Hash Prefix (No Raw Value)</th>
+                  </tr>
+                </thead>
+                <tbody id="findings-table-body">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- High Risk Warning Alert (if user keeps high-risk items) -->
+            <div class="alert alert-warning hidden" id="high-risk-alert">
+              ⚠️ <strong>High Risk Warning:</strong> You have unselected a high-risk entity (STUDENT_ID, ID_NUMBER, or ADDRESS).
+              The governor will require explicit approval override before releasing any text.
+              <div class="mt-2">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="override-high-checkbox">
+                  <span>I understand the risk and explicitly override high-risk entity approval.</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn btn-accent" id="btn-redact">
+                <span class="btn-spinner hidden" id="redact-spinner"></span>
+                <span>Apply Redaction &amp; Run Strict Validator</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output & Decision Banner Panel (hidden until redaction) -->
+        <div class="card card-output hidden" id="output-panel">
+          <div class="decision-banner" id="decision-banner">
+            <div class="decision-icon" id="decision-icon">🛡️</div>
+            <div>
+              <div class="decision-title" id="decision-title">DECISION: PENDING</div>
+              <div class="decision-desc" id="decision-desc">The governor evaluated the release criteria.</div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="output-stats-bar">
+              <div class="stat-item">
+                <span class="stat-label">Redaction Rounds</span>
+                <span class="stat-val" id="stat-rounds">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Residual Entities</span>
+                <span class="stat-val" id="stat-residual">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Validator Status</span>
+                <span class="stat-val" id="stat-val-status">CLEAN</span>
+              </div>
+            </div>
+
+            <div class="output-preview-box">
+              <label>Sanitised Output (Ready for External AI Tools):</label>
+              <textarea id="sanitized-text" readonly></textarea>
+            </div>
+
+            <div class="actions-row">
+              <button class="btn btn-outline" id="btn-copy">📋 Copy Sanitised Text</button>
+              <button class="btn btn-outline" id="btn-download">💾 Download .txt</button>
+              <button class="btn btn-ghost" id="btn-view-report-job">View Job Privacy Report</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: PRIVACY REPORT -->
+      <section id="tab-report" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <h3>Document Privacy &amp; Compliance Audit Report</h3>
+            <span class="helper">Detailed entity breakdown and audit trail verification</span>
+          </div>
+          <div class="card-body">
+            <div class="report-job-selector">
+              <label>Active Job ID:</label>
+              <input type="text" id="report-job-id" placeholder="Enter Job ID or select from scan..." />
+              <button class="btn btn-primary" id="btn-load-report">Fetch Report</button>
+            </div>
+
+            <div id="report-content" class="report-content-box hidden">
+              <div class="report-grid">
+                <div class="stat-card">
+                  <div class="stat-num" id="rep-job-status">-</div>
+                  <div class="stat-title">Governor Status</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="rep-risk-level">-</div>
+                  <div class="stat-title">Assessed Risk Level</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="rep-entities-detected">-</div>
+                  <div class="stat-title">Total Entities Detected</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-num" id="rep-ledger-integrity">-</div>
+                  <div class="stat-title">Ledger Integrity</div>
+                </div>
+              </div>
+
+              <h4 class="mt-4">Entity Distribution</h4>
+              <div class="distribution-bars" id="rep-dist-bars">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: AUDIT LEDGER -->
+      <section id="tab-ledger" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3>SHA-256 Tamper-Evident Audit Ledger</h3>
+              <span class="helper">Append-only cryptographic proof of scan, redact, rescan &amp; decision events</span>
+            </div>
+            <div class="ledger-actions">
+              <button class="btn btn-sm btn-outline" id="btn-refresh-ledger">🔄 Refresh Ledger</button>
+              <button class="btn btn-sm btn-danger" id="btn-tamper-ledger">⚠️ Simulate Tampering</button>
+              <button class="btn btn-sm btn-ghost" id="btn-reset-tamper">Restore Integrity</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="ledger-status-banner" id="ledger-status-banner">
+              <div class="ledger-status-icon" id="ledger-banner-icon">✅</div>
+              <div>
+                <strong id="ledger-banner-title">CHAIN INTEGRITY: VERIFIED</strong>
+                <p id="ledger-banner-desc">All SHA-256 blocks have valid hashes and link back sequentially to the Genesis block.</p>
+              </div>
+            </div>
+
+            <div class="table-container mt-4">
+              <table class="ledger-table">
+                <thead>
+                  <tr>
+                    <th>Index</th>
+                    <th>Stage</th>
+                    <th>Status</th>
+                    <th>Job ID</th>
+                    <th>Prev Hash</th>
+                    <th>Block SHA-256 Hash</th>
+                    <th>Metadata</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-table-body">
+                  <!-- Injected via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

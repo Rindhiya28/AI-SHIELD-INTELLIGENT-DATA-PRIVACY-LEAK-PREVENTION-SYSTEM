@@ -1,0 +1,350 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AI Shield: Intelligent Data Privacy & Leak Prevention System
+  Serverless Platform architecture: API Gateway, Microservice Lambdas,
+  Step Functions state machine with pause tokens, S3 buckets, and DynamoDB.
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.11
+    Environment:
+      Variables:
+        JOBS_TABLE: !Ref JobsTable
+        UPLOADS_BUCKET: !Ref UploadsBucket
+        SANITIZED_BUCKET: !Ref SanitizedBucket
+        REPORTS_BUCKET: !Ref ReportsBucket
+        KMS_KEY_ARN: !GetAtt KMSKey.Arn
+        POWERTOOLS_SERVICE_NAME: aishield
+
+Resources:
+  # =========================================================================
+  # Cryptographic Key (KMS Customer Managed Key)
+  # =========================================================================
+  KMSKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Customer Managed Key for AI Shield data and log encryption
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: aishield-key-policy
+        Statement:
+          - Sid: EnableRootPermissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Sid: AllowLambdaAndServices
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+                - s3.amazonaws.com
+                - dynamodb.amazonaws.com
+                - states.amazonaws.com
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:DescribeKey'
+            Resource: '*'
+
+  KMSKeyAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/aishield-key
+      TargetKeyId: !Ref KMSKey
+
+  # =========================================================================
+  # Storage: S3 Buckets with KMS Encryption & Strict EnforceTLS
+  # =========================================================================
+  UploadsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'aishield-uploads-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyId: !GetAtt KMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireUploads
+            Status: Enabled
+            ExpirationInDays: 7
+
+  UploadsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref UploadsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureConnections
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub 'arn:aws:s3:::${UploadsBucket}'
+              - !Sub 'arn:aws:s3:::${UploadsBucket}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  SanitizedBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'aishield-sanitized-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyId: !GetAtt KMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  SanitizedBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SanitizedBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureConnections
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub 'arn:aws:s3:::${SanitizedBucket}'
+              - !Sub 'arn:aws:s3:::${SanitizedBucket}/*'
+            Condition:
+              Bool:
+                'aws:SecureTransport': 'false'
+
+  ReportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'aishield-reports-${AWS::AccountId}-${AWS::Region}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              KMSMasterKeyId: !GetAtt KMSKey.Arn
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  WebHostingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'aishield-web-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  # =========================================================================
+  # DynamoDB Jobs Table with TTL and KMS Encryption
+  # =========================================================================
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: aishield-jobs
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+        KMSMasterKeyId: !GetAtt KMSKey.Arn
+
+  # =========================================================================
+  # API Gateway REST API with CORS, Throttling & Request Validation
+  # =========================================================================
+  AIShieldApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'POST, GET, OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
+        AllowOrigin: "'*'"
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingRateLimit: 100
+          ThrottlingBurstLimit: 50
+
+  # =========================================================================
+  # Lambda Functions: The 8 Microservices
+  # =========================================================================
+  UploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-upload-service
+      Handler: aishield.lambdas.upload_handler
+      CodeUri: .
+      Events:
+        UploadApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AIShieldApi
+            Path: /upload
+            Method: POST
+
+  ExtractFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-extract-service
+      Handler: aishield.lambdas.extract_handler
+      CodeUri: .
+
+  DetectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-detect-service
+      Handler: aishield.lambdas.detect_handler
+      CodeUri: .
+      Events:
+        ScanApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AIShieldApi
+            Path: /scan
+            Method: POST
+
+  RiskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-risk-service
+      Handler: aishield.lambdas.risk_handler
+      CodeUri: .
+
+  ReviewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-review-service
+      Handler: aishield.lambdas.review_handler
+      CodeUri: .
+      Events:
+        ReviewApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AIShieldApi
+            Path: /review
+            Method: POST
+
+  RedactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-redact-service
+      Handler: aishield.lambdas.redact_handler
+      CodeUri: .
+      Events:
+        RedactApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AIShieldApi
+            Path: /redact
+            Method: POST
+
+  RescanFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-rescan-service
+      Handler: aishield.lambdas.rescan_handler
+      CodeUri: .
+
+  ReportFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-report-service
+      Handler: aishield.lambdas.report_handler
+      CodeUri: .
+      Events:
+        ReportApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AIShieldApi
+            Path: /report/{jobId}
+            Method: GET
+
+  ExplainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aishield-explain-service
+      Handler: aishield.lambdas.explain_handler
+      CodeUri: .
+      Events:
+        ExplainApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AIShieldApi
+            Path: /explain
+            Method: POST
+
+  # =========================================================================
+  # Step Functions State Machine (Privacy Scan Workflow)
+  # =========================================================================
+  AIShieldStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: aishield-privacy-scan-pipeline
+      DefinitionUri: deploy/state_machine.json
+      DefinitionSubstitutions:
+        ExtractServiceArn: !GetAtt ExtractFunction.Arn
+        DetectServiceArn: !GetAtt DetectFunction.Arn
+        RiskServiceArn: !GetAtt RiskFunction.Arn
+        ReviewServiceArn: !GetAtt ReviewFunction.Arn
+        RedactServiceArn: !GetAtt RedactFunction.Arn
+        RescanServiceArn: !GetAtt RescanFunction.Arn
+        ReportServiceArn: !GetAtt ReportFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ExtractFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DetectFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RiskFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ReviewFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RedactFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RescanFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ReportFunction
+
+Outputs:
+  ApiEndpoint:
+    Description: Base API Gateway execution endpoint URL
+    Value: !Sub 'https://${AIShieldApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  StateMachineArn:
+    Description: Step Functions Orchestration Workflow ARN
+    Value: !Ref AIShieldStateMachine
+  JobsTableArn:
+    Description: DynamoDB Jobs Table ARN
+    Value: !GetAtt JobsTable.Arn

@@ -1,0 +1,33 @@
+{
+  "Comment": "AI Shield privacy scan workflow",
+  "StartAt": "ExtractText",
+  "States": {
+    "ExtractText": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {"FunctionName": "extract-service", "Payload.$": "$"},
+      "Retry": [{"ErrorEquals": ["States.TaskFailed"], "MaxAttempts": 2, "BackoffRate": 2.0}],
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "Next": "DetectEntities"},
+    "DetectEntities": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {"FunctionName": "detect-service", "Payload.$": "$"},
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "Next": "ClassifyRisk"},
+    "ClassifyRisk": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {"FunctionName": "risk-service", "Payload.$": "$"},
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "Next": "WaitForUserReview"},
+    "WaitForUserReview": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
+      "Parameters": {"FunctionName": "review-service", "Payload": {"input.$": "$", "taskToken.$": "$$.Task.Token"}},
+      "TimeoutSeconds": 86400,
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "Next": "Redact"},
+    "Redact": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {"FunctionName": "redact-service", "Payload.$": "$"},
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "Next": "Rescan"},
+    "Rescan": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {"FunctionName": "rescan-service", "Payload.$": "$"},
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "Next": "ResidualCheck"},
+    "ResidualCheck": {"Type": "Choice",
+      "Choices": [{"Variable": "$.residual_count", "NumericGreaterThan": 0, "Next": "Redact"}],
+      "Default": "GenerateReport"},
+    "GenerateReport": {"Type": "Task", "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {"FunctionName": "report-service", "Payload.$": "$"},
+      "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "HandleError"}], "End": true},
+    "HandleError": {"Type": "Fail", "Error": "ScanFailed", "Cause": "A task failed after retries"}
+  }
+}

@@ -1,0 +1,16 @@
+INPUT    : My name is Rindhiya A. My email is rindhiya@example.com, and my register number is 23UAI091. Reach me on 98765 43210 or 9 8 7 6 5 4 3 2 1 0. Date of birth: 14/03/2004. Please summarize my project report.
+DECISION : REDACT | risk: HIGH | redaction rounds: 2 | residual: 0
+FINDINGS :
+  #0 PERSON         span=[ 11, 21) conf=0.90 detector=context   hash=ec2e0a31f76f
+  #1 EMAIL          span=[ 35, 55) conf=1.00 detector=regex     hash=3c1581eae16c
+  #2 STUDENT_ID     span=[ 83, 91) conf=0.95 detector=regex     hash=84def5993855
+  #3 PHONE          span=[105,116) conf=0.97 detector=regex     hash=c5e1a6c7b2c7
+  #4 DATE_OF_BIRTH  span=[156,166) conf=0.90 detector=context   hash=5d4a4aa689d7
+OUTPUT   : My name is [PERSON]. My email is [EMAIL], and my register number is [STUDENT_ID]. Reach me on [PHONE] or [REDACTED]. Date of birth: [DATE_OF_BIRTH]. Please summarize my project report.
+LEDGER   :
+  #0 SCAN     OK        prev=0000000000 hash=bf0b61eaa0
+  #1 RESCAN   RESIDUAL  prev=bf0b61eaa0 hash=75b5655040
+  #2 RESCAN   CLEAN     prev=75b5655040 hash=12d9adff26
+  #3 DECISION REDACT    prev=12d9adff26 hash=eb3695ce4b
+INTEGRITY: VALID
+AFTER EDITING BLOCK #1 -> BROKEN (tampering detected)

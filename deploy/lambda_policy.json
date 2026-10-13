@@ -1,0 +1,10 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {"Sid": "ReadUploads", "Effect": "Allow", "Action": ["s3:GetObject"], "Resource": "arn:aws:s3:::aishield-data/uploads/*"},
+    {"Sid": "WriteExtracted", "Effect": "Allow", "Action": ["s3:PutObject"], "Resource": "arn:aws:s3:::aishield-data/extracted/*"},
+    {"Sid": "UseDataKey", "Effect": "Allow", "Action": ["kms:Decrypt", "kms:GenerateDataKey"], "Resource": "arn:aws:kms:ap-south-1:111122223333:key/example-data-key-id"},
+    {"Sid": "JobTable", "Effect": "Allow", "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"], "Resource": "arn:aws:dynamodb:ap-south-1:111122223333:table/aishield-jobs"},
+    {"Sid": "WriteLogs", "Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"], "Resource": "arn:aws:logs:ap-south-1:111122223333:log-group:/aws/lambda/aishield-*:*"}
+  ]
+}

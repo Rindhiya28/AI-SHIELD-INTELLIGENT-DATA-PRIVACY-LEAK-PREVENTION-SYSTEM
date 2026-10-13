@@ -1,0 +1,57 @@
+{
+ "rows_in": 613,
+ "rows_dedup": 588,
+ "docs": 151,
+ "spark_start_s": 34.54,
+ "etl_s": 58.03,
+ "parquet_files": 1,
+ "parquet_kb": 11.4,
+ "sample": [
+  {
+   "doc_id": "doc000",
+   "entity_count": 1,
+   "distinct_types": 1,
+   "person_count": 0,
+   "email_count": 0,
+   "student_id_count": 1,
+   "density_per_1k": 2.56
+  },
+  {
+   "doc_id": "doc002",
+   "entity_count": 9,
+   "distinct_types": 7,
+   "person_count": 2,
+   "email_count": 1,
+   "student_id_count": 1,
+   "density_per_1k": 13.64
+  },
+  {
+   "doc_id": "doc003",
+   "entity_count": 10,
+   "distinct_types": 7,
+   "person_count": 3,
+   "email_count": 1,
+   "student_id_count": 1,
+   "density_per_1k": 21.37
+  },
+  {
+   "doc_id": "doc005",
+   "entity_count": 3,
+   "distinct_types": 3,
+   "person_count": 1,
+   "email_count": 0,
+   "student_id_count": 1,
+   "density_per_1k": 7.06
+  },
+  {
+   "doc_id": "doc006",
+   "entity_count": 1,
+   "distinct_types": 1,
+   "person_count": 0,
+   "email_count": 0,
+   "student_id_count": 0,
+   "density_per_1k": 3.47
+  }
+ ],
+ "spark_version": "4.0.1"
+}

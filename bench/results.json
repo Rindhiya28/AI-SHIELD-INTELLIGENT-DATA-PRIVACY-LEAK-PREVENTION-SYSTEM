@@ -1,0 +1,580 @@
+{
+ "corpus": {
+  "test_docs": 200,
+  "train_docs": 800,
+  "kinds": {
+   "hardneg": 41,
+   "clean": 32,
+   "heavy": 27,
+   "light": 39,
+   "typical": 61
+  },
+  "pii_entities": 545,
+  "negatives": 333,
+  "avg_chars": 359.5,
+  "by_type": {
+   "PHONE": 56,
+   "ADDRESS": 62,
+   "EMAIL": 62,
+   "PERSON": 125,
+   "STUDENT_ID": 62,
+   "ID_NUMBER": 116,
+   "DATE_OF_BIRTH": 62
+  }
+ },
+ "detection_c3": {
+  "PERSON": {
+   "tp": 117,
+   "fp": 28,
+   "fn": 8,
+   "precision": 0.807,
+   "recall": 0.936,
+   "f1": 0.867
+  },
+  "EMAIL": {
+   "tp": 62,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "PHONE": {
+   "tp": 56,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "STUDENT_ID": {
+   "tp": 62,
+   "fp": 16,
+   "fn": 0,
+   "precision": 0.795,
+   "recall": 1.0,
+   "f1": 0.886
+  },
+  "ID_NUMBER": {
+   "tp": 116,
+   "fp": 7,
+   "fn": 0,
+   "precision": 0.943,
+   "recall": 1.0,
+   "f1": 0.971
+  },
+  "ADDRESS": {
+   "tp": 62,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "DATE_OF_BIRTH": {
+   "tp": 62,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "MICRO": {
+   "tp": 537,
+   "fp": 51,
+   "fn": 8,
+   "precision": 0.913,
+   "recall": 0.985,
+   "f1": 0.948
+  }
+ },
+ "detection_c2": {
+  "PERSON": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 125,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "EMAIL": {
+   "tp": 62,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "PHONE": {
+   "tp": 56,
+   "fp": 0,
+   "fn": 0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "STUDENT_ID": {
+   "tp": 62,
+   "fp": 16,
+   "fn": 0,
+   "precision": 0.795,
+   "recall": 1.0,
+   "f1": 0.886
+  },
+  "ID_NUMBER": {
+   "tp": 116,
+   "fp": 48,
+   "fn": 0,
+   "precision": 0.707,
+   "recall": 1.0,
+   "f1": 0.829
+  },
+  "ADDRESS": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 62,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "DATE_OF_BIRTH": {
+   "tp": 0,
+   "fp": 0,
+   "fn": 62,
+   "precision": 0.0,
+   "recall": 0.0,
+   "f1": 0.0
+  },
+  "MICRO": {
+   "tp": 296,
+   "fp": 64,
+   "fn": 249,
+   "precision": 0.822,
+   "recall": 0.543,
+   "f1": 0.654
+  }
+ },
+ "bench": {
+  "Config 1: Unchecked (raw text)": {
+   "URR": 100.0,
+   "ERR": 0.0,
+   "FRR": 0.0,
+   "CDAR": 100.0,
+   "blocked": 0,
+   "extra_rounds": 0,
+   "mean_ms": 0.001,
+   "p95_ms": 0.001
+  },
+  "Config 2: Regex baseline": {
+   "URR": 91.3,
+   "ERR": 54.3,
+   "FRR": 19.2,
+   "CDAR": 58.9,
+   "blocked": 0,
+   "extra_rounds": 0,
+   "mean_ms": 0.155,
+   "p95_ms": 0.265
+  },
+  "Config 3: AI Shield detector": {
+   "URR": 6.3,
+   "ERR": 98.5,
+   "FRR": 15.3,
+   "CDAR": 65.8,
+   "blocked": 0,
+   "extra_rounds": 0,
+   "mean_ms": 0.538,
+   "p95_ms": 0.972
+  },
+  "Config 4: AI Shield (full)": {
+   "URR": 6.3,
+   "ERR": 98.5,
+   "FRR": 34.5,
+   "CDAR": 39.7,
+   "blocked": 0,
+   "extra_rounds": 52,
+   "mean_ms": 0.791,
+   "p95_ms": 1.606
+  }
+ },
+ "bench_counts": {
+  "pii_docs": 127,
+  "clean_docs": 73,
+  "negatives": 333
+ },
+ "adv": {
+  "Config 1: Unchecked (raw text)": {
+   "Spaced email": [
+    0,
+    2
+   ],
+   "[at]/[dot] email": [
+    0,
+    2
+   ],
+   "Full-width digits phone": [
+    0,
+    2
+   ],
+   "Zero-width in ID": [
+    0,
+    2
+   ],
+   "Spaced digit phone": [
+    0,
+    2
+   ],
+   "Phone in words": [
+    0,
+    2
+   ],
+   "Dotted ID number": [
+    0,
+    2
+   ],
+   "Uppercase name": [
+    0,
+    2
+   ],
+   "Name after line break": [
+    0,
+    2
+   ],
+   "URL-encoded email": [
+    0,
+    2
+   ],
+   "Non-Latin name": [
+    0,
+    2
+   ],
+   "Lowercase name": [
+    0,
+    2
+   ]
+  },
+  "Config 2: Regex baseline": {
+   "Spaced email": [
+    0,
+    2
+   ],
+   "[at]/[dot] email": [
+    0,
+    2
+   ],
+   "Full-width digits phone": [
+    0,
+    2
+   ],
+   "Zero-width in ID": [
+    0,
+    2
+   ],
+   "Spaced digit phone": [
+    0,
+    2
+   ],
+   "Phone in words": [
+    0,
+    2
+   ],
+   "Dotted ID number": [
+    0,
+    2
+   ],
+   "Uppercase name": [
+    0,
+    2
+   ],
+   "Name after line break": [
+    0,
+    2
+   ],
+   "URL-encoded email": [
+    0,
+    2
+   ],
+   "Non-Latin name": [
+    0,
+    2
+   ],
+   "Lowercase name": [
+    0,
+    2
+   ]
+  },
+  "Config 3: AI Shield detector": {
+   "Spaced email": [
+    0,
+    2
+   ],
+   "[at]/[dot] email": [
+    0,
+    2
+   ],
+   "Full-width digits phone": [
+    2,
+    2
+   ],
+   "Zero-width in ID": [
+    2,
+    2
+   ],
+   "Spaced digit phone": [
+    0,
+    2
+   ],
+   "Phone in words": [
+    0,
+    2
+   ],
+   "Dotted ID number": [
+    0,
+    2
+   ],
+   "Uppercase name": [
+    0,
+    2
+   ],
+   "Name after line break": [
+    2,
+    2
+   ],
+   "URL-encoded email": [
+    0,
+    2
+   ],
+   "Non-Latin name": [
+    0,
+    2
+   ],
+   "Lowercase name": [
+    0,
+    2
+   ]
+  },
+  "Config 4: AI Shield (full)": {
+   "Spaced email": [
+    2,
+    2
+   ],
+   "[at]/[dot] email": [
+    2,
+    2
+   ],
+   "Full-width digits phone": [
+    2,
+    2
+   ],
+   "Zero-width in ID": [
+    2,
+    2
+   ],
+   "Spaced digit phone": [
+    2,
+    2
+   ],
+   "Phone in words": [
+    0,
+    2
+   ],
+   "Dotted ID number": [
+    2,
+    2
+   ],
+   "Uppercase name": [
+    2,
+    2
+   ],
+   "Name after line break": [
+    2,
+    2
+   ],
+   "URL-encoded email": [
+    2,
+    2
+   ],
+   "Non-Latin name": [
+    0,
+    2
+   ],
+   "Lowercase name": [
+    2,
+    2
+   ]
+  }
+ },
+ "decisions": {
+  "REDACT": 171,
+  "ALLOW": 29
+ },
+ "consent": {
+  "REQUEST_APPROVAL": 113,
+  "REDACT": 14
+ },
+ "consent_violations": 0,
+ "stage_us": {
+  "normalize": 22.0,
+  "detect": 203.1,
+  "redact": 4.1,
+  "rescan": 235.7
+ },
+ "risk": {
+  "rf_accuracy": 0.99,
+  "rf_macro_f1": 0.993,
+  "rule_accuracy": 0.935,
+  "rule_macro_f1": 0.953,
+  "cm": [
+   [
+    80,
+    0,
+    1
+   ],
+   [
+    0,
+    4,
+    0
+   ],
+   [
+    1,
+    0,
+    114
+   ]
+  ],
+  "labels": [
+   "LOW",
+   "MEDIUM",
+   "HIGH"
+  ],
+  "test_dist": {
+   "LOW": 81,
+   "HIGH": 115,
+   "MEDIUM": 4
+  },
+  "importances": {
+   "PERSON": 0.015,
+   "EMAIL": 0.007,
+   "PHONE": 0.016,
+   "STUDENT_ID": 0.013,
+   "ID_NUMBER": 0.059,
+   "ADDRESS": 0.034,
+   "DATE_OF_BIRTH": 0.012,
+   "density": 0.28,
+   "has_high": 0.145,
+   "name_with_other": 0.031,
+   "n_types": 0.217,
+   "mean_conf": 0.171
+  },
+  "infer_ms": 11.05
+ },
+ "rag": {
+  "queries": 33,
+  "corpus": 20,
+  "top1": 60.6,
+  "top3": 78.8
+ },
+ "gate": {
+  "prompts_built": 200,
+  "gate_blocked": 0,
+  "prompts_with_leak": 8,
+  "raw_pii_docs": 127,
+  "raw_blocked": 127,
+  "prompt_ms": 2.31
+ },
+ "agent": {
+  "unconfirmed_attempts": 60,
+  "refused": 60,
+  "read_tools_ok": 4,
+  "confirmed_ok": true
+ },
+ "ledger": {
+  "blocks": 1000,
+  "valid": true,
+  "record_us": 34.6,
+  "verify_ms": 32.34,
+  "tamper": {
+   "modify": 100,
+   "delete": 100,
+   "reorder": 100,
+   "insert": 100
+  }
+ },
+ "hygiene": {
+  "log_lines": 400,
+  "values_checked": 545,
+  "in_logs": 0,
+  "in_ledger": 0,
+  "ledger_blocks": 652,
+  "ledger_valid": true
+ },
+ "handlers": {
+  "cases": [
+   [
+    "missing body",
+    400,
+    400
+   ],
+   [
+    "invalid JSON",
+    400,
+    400
+   ],
+   [
+    "body not object",
+    400,
+    400
+   ],
+   [
+    "empty text",
+    400,
+    400
+   ],
+   [
+    "text not string",
+    400,
+    400
+   ],
+   [
+    "too large",
+    413,
+    413
+   ],
+   [
+    "unknown job redact",
+    404,
+    404
+   ],
+   [
+    "unknown job report",
+    404,
+    404
+   ],
+   [
+    "valid scan",
+    200,
+    200
+   ],
+   [
+    "valid redact",
+    200,
+    200
+   ],
+   [
+    "valid report",
+    200,
+    200
+   ]
+  ],
+  "passed": 11,
+  "total": 11,
+  "no_raw_in_response": true,
+  "scan_mean_ms": 0.489
+ },
+ "deploy": {
+  "states": 9,
+  "reachable": 9,
+  "terminal": 2,
+  "dangling": 0,
+  "policy_statements": 5,
+  "wildcard_actions": 0
+ }
+}

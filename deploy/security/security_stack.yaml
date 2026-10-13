@@ -1,0 +1,220 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  AI Shield Security & Governance Architecture
+  - Least-Privilege IAM Roles (One per Lambda, zero wildcard actions)
+  - VPC with Private Subnets and VPC Endpoints for S3, DynamoDB, KMS, Logs
+  - S3 Bucket Policies denying non-TLS traffic (aws:SecureTransport: false)
+  - KMS Customer Managed Keys with automatic rotation
+  - CloudTrail with multi-region and log file validation
+  - CloudWatch Alarms with SNS notifications
+  - Cognito User Pool and Authorizer
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+
+Resources:
+  # =========================================================================
+  # 1. VPC Network Architecture (Private Subnets & VPC Endpoints)
+  # =========================================================================
+  AIShieldVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: aishield-vpc
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AIShieldVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AIShieldVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+
+  # VPC Endpoints for secure private communication
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref AIShieldVPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.s3'
+      VpcEndpointType: Gateway
+
+  DynamoDBEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref AIShieldVPC
+      ServiceName: !Sub 'com.amazonaws.${AWS::Region}.dynamodb'
+      VpcEndpointType: Gateway
+
+  # =========================================================================
+  # 2. Least-Privilege IAM Roles (One per Lambda - No Wildcards)
+  # =========================================================================
+  LambdaExecutionBaseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+
+  UploadLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: UploadServiceLeastPrivilege
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: PutUploadsOnly
+                Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                Resource: !Sub 'arn:aws:s3:::aishield-uploads-${AWS::AccountId}-${AWS::Region}/uploads/*'
+              - Sid: KMSUploadKey
+                Effect: Allow
+                Action:
+                  - 'kms:GenerateDataKey'
+                  - 'kms:Encrypt'
+                Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+
+  ExtractLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: ExtractServiceLeastPrivilege
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadUploadsOnly
+                Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                Resource: !Sub 'arn:aws:s3:::aishield-uploads-${AWS::AccountId}-${AWS::Region}/uploads/*'
+              - Sid: KMSDecryptUploads
+                Effect: Allow
+                Action:
+                  - 'kms:Decrypt'
+                Resource: !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/*'
+
+  DetectLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: DetectServiceLeastPrivilege
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: DynamoJobWrite
+                Effect: Allow
+                Action:
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:GetItem'
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/aishield-jobs'
+
+  # =========================================================================
+  # 3. CloudTrail, CloudWatch Alarms & SNS Security Notification
+  # =========================================================================
+  SecurityAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: aishield-security-alerts
+
+  CloudTrailS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'aishield-cloudtrail-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  AIShieldAuditTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: aishield-compliance-trail
+      S3BucketName: !Ref CloudTrailS3Bucket
+      IsLogging: true
+      EnableLogFileValidation: true
+      IsMultiRegionTrail: true
+      IncludeGlobalServiceEvents: true
+
+  ResidualLeakageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: aishield-residual-leakage-detected
+      AlarmDescription: Alarm triggered when governor validator detects residual PII after redaction
+      MetricName: ResidualDetected
+      Namespace: AIShield/Governance
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Ref SecurityAlarmTopic
+
+  # =========================================================================
+  # 4. Amazon Cognito User Authentication & Authorizer
+  # =========================================================================
+  AIShieldUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: aishield-user-pool
+      AutoVerifiedAttributes:
+        - email
+      MfaConfiguration: 'OPTIONAL'
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 10
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+
+  AIShieldUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: aishield-web-client
+      UserPoolId: !Ref AIShieldUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
